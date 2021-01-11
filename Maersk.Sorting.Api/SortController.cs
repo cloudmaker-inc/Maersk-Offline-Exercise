@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Maersk.Sorting.Api.Controllers
@@ -10,7 +11,12 @@ namespace Maersk.Sorting.Api.Controllers
     {
         private readonly ISortJobProcessor _sortJobProcessor;
 
-        public SortController(ISortJobProcessor sortJobProcessor)
+        /// <summary>
+        ///     Initializes the class of type <see cref="SortController"/>.
+        /// </summary>
+        /// <param name="sortJobProcessor">The sorting job processor.</param>
+        public SortController(
+            ISortJobProcessor sortJobProcessor)
         {
             _sortJobProcessor = sortJobProcessor;
         }
@@ -31,25 +37,66 @@ namespace Maersk.Sorting.Api.Controllers
             return Ok(completedJob);
         }
 
-        [HttpPost]
-        public Task<ActionResult<SortJob>> EnqueueJob(int[] values)
+        [HttpPost("jobs/enqueue")]
+        public async Task<ActionResult<SortJob>> EnqueueJob(int[] values)
         {
-            // TODO: Should enqueue a job to be processed in the background.
-            throw new NotImplementedException();
+            try
+            {
+                var pendingJob = new SortJob(
+                    id: Guid.NewGuid(),
+                    status: SortJobStatus.Pending,
+                    duration: null,
+                    input: values,
+                    output: null);
+
+                var jobStatus = await this._sortJobProcessor.EnqueueJob(pendingJob);
+
+                return Ok(jobStatus);
+            }
+            catch (Exception ex)
+            {
+                return Problem($"Failed to enqueue the sorting request due to exception: {ex.Message}");
+            }
         }
 
-        [HttpGet]
-        public Task<ActionResult<SortJob[]>> GetJobs()
+        [HttpGet("jobs")]
+        public async Task<ActionResult<SortJob[]>> GetJobs()
         {
-            // TODO: Should return all jobs that have been enqueued (both pending and completed).
-            throw new NotImplementedException();
+            try
+            {
+                var jobs = await Task.Run(() => this._sortJobProcessor.GetEnqueuedJobs());
+
+                if (jobs.Any())
+                {
+                    return Ok(jobs);
+                }
+
+                return NotFound($"No jobs in the in-memory storage.");
+            }
+            catch (Exception ex)
+            {
+                return Problem($"Failed to get list of the enqueued jobs due to exception: {ex.Message}");
+            }
         }
 
-        [HttpGet("{jobId}")]
-        public Task<ActionResult<SortJob>> GetJob(Guid jobId)
+        [HttpGet("jobs/{jobId}")]
+        public async Task<ActionResult<SortJob>> GetJob(Guid jobId)
         {
-            // TODO: Should return a specific job by ID.
-            throw new NotImplementedException();
+            try
+            {
+                var job = await Task.Run(() => this._sortJobProcessor.GetEnqueuedJob(jobId));
+
+                if (job != null)
+                {
+                    return Ok(job);
+                }
+
+                return NotFound($"Job with Id {jobId} not found in the in-memory storage");
+            }
+            catch (Exception ex)
+            {
+                return Problem($"Failed to get job with Id {jobId} due to exception: {ex.Message}");
+            }
         }
     }
 }

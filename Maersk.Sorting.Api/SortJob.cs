@@ -5,7 +5,12 @@ namespace Maersk.Sorting.Api
 {
     public class SortJob
     {
-        public SortJob(Guid id, SortJobStatus status, TimeSpan? duration, IReadOnlyCollection<int> input, IReadOnlyCollection<int>? output)
+        public SortJob(
+            Guid id,
+            SortJobStatus status,
+            TimeSpan? duration,
+            IReadOnlyCollection<int> input,
+            IReadOnlyCollection<int>? output)
         {
             Id = id;
             Status = status;
